@@ -227,7 +227,6 @@ fn create_and_submit_order(price : f64, client: &mut Client<TlsStream<TcpStream>
 }
 
 fn cancel_order(order_id :String, client: &mut Client<TlsStream<TcpStream>>) -> serde_json::Result<()> {
- 
     let cancel = json! ({
         "action": "CancelOrderRequest",
         "channel": "trading",
@@ -240,7 +239,7 @@ fn cancel_order(order_id :String, client: &mut Client<TlsStream<TcpStream>>) -> 
       
       let message = Message::text(cancel_json);
       client.send_message(&message).unwrap();
-  
+      
       Ok(())
 }
 
