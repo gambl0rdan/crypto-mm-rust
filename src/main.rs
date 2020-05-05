@@ -264,7 +264,7 @@ fn handle_trading(value : serde_json::Value, ) -> Option<Vec<Task>>{
         };
     }
 
-     if order_ids.len() > 0 {Some(vec![Task{action:"cancel", order_ids: Some(order_ids), tick_price: None, tick_l2: None, tick_last_price:None}])} else {None}   
+    if order_ids.len() > 0 {Some(vec![Task{action:"cancel", order_ids: Some(order_ids), tick_price: None, tick_l2: None, tick_last_price:None}])} else {None}   
 }
 
 fn handle_l2(value : serde_json::Value) -> serde_json::Result<()>{
