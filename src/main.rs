@@ -100,7 +100,6 @@ fn run_for_blockchain(base_ccy : String) {
     println!("{}", "Connection successful");
     
     let message = Message::text(connect_sub());
-    
     client.send_message(&message).unwrap();
     
     subscribe_to_channel("prices", &subscriptions, &mut client); 
@@ -148,11 +147,9 @@ fn run_for_blockchain(base_ccy : String) {
                                 break
                             }
                         }
-
                     },
                     None => (),
                 }
-                
 			}
 			OwnedMessage::Close(_) => {
 				// let _ = sender.send_message(&Message::close());
@@ -167,7 +164,6 @@ fn run_for_blockchain(base_ccy : String) {
 }
 
 fn handle_api_response(resp : &String) -> Option<Vec<Task>> {
-     
     let parsed : serde_json::Value = match serde_json::from_str(resp) {
         Ok(val) => val,
         Err(e) => {
@@ -205,8 +201,7 @@ fn handle_api_response(resp : &String) -> Option<Vec<Task>> {
     None
 }
 
-fn create_order(side : &str, price : f64, order_qty : f64, symbol : &str) -> ExchangeOrder {
-   
+fn create_order(side : &str, price : f64, order_qty : f64, symbol : &str) -> ExchangeOrder { 
     let order_id = Uuid::new_v4().to_string();
     let order_id = &order_id[0..20];
 
@@ -219,8 +214,7 @@ fn create_order(side : &str, price : f64, order_qty : f64, symbol : &str) -> Exc
         .finalize()
 }
 
-fn create_and_submit_order(price : f64, client: &mut Client<TlsStream<TcpStream>>) -> serde_json::Result<()> {
-    
+fn create_and_submit_order(price : f64, client: &mut Client<TlsStream<TcpStream>>) -> serde_json::Result<()> { 
     let order : ExchangeOrder = create_order("buy", price, 0.010, "BTC-GBP");
     let order_json = serde_json::to_string(&order)?;
 
@@ -274,7 +268,6 @@ fn handle_trading(value : serde_json::Value, ) -> Option<Vec<Task>>{
 }
 
 fn handle_l2(value : serde_json::Value) -> serde_json::Result<()>{
-
     let tick_l2 : orders::OrderL2 = serde_json::from_value(value)?;
     
     //I've commented these out as the ticks are too frequent. Can do something smarter than just iterating though.

@@ -129,7 +129,6 @@ pub struct CcyPair<'a> {
 }
 
 pub struct OrderEngine<CcyPair> {
-
     pub series_l2 : Vec<OrderL2>,
     pub series_prices : Vec<TickPrice>,
     pub serices_last_price : Vec<f64>,
@@ -137,7 +136,6 @@ pub struct OrderEngine<CcyPair> {
     max_orders : u32,
     submitted_orders : u32
 }
-
 
 impl <CcyPair> OrderEngine<CcyPair> {
     
@@ -175,21 +173,6 @@ impl <CcyPair> OrderEngine<CcyPair> {
             _ => return None 
         };
         None
-    }
-   
-
-    pub fn check_for_new_order(&mut self, last_traded: Option<&f64>, close_price: Option<&TickPrice>) -> Option<Task> {
-        
-        last_traded.and_then(|px| close_price.and_then(|cls_px| {
-            println!("Checking prices to decide to generate a new order for last px: {} and close px: {}", px, cls_px.close);
-            if px < &cls_px.close {
-                self.max_orders = self.max_orders + 1;
-                return Some(Task{action:"new_order", order_ids:None, tick_price:None, tick_l2:None, tick_last_price:Some(px * 0.995)});
-            } else{
-                return None;
-            }
-        
-        }))
     }
 }
 
