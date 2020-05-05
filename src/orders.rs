@@ -14,16 +14,13 @@ pub struct TickPrice {
     pub volume : f64
 }
 
-
 pub struct Task {
     pub action : & 'static str,
     pub order_ids : Option<Vec<String>>,
     pub tick_price : Option<TickPrice>,
     pub tick_l2 : Option<OrderL2>,
-    pub tick_last_price : Option<f64>
-    
+    pub tick_last_price : Option<f64> 
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct OrderRow {
@@ -48,7 +45,6 @@ pub struct ExchangeOrder {
     channel     : String,
     ordType     : String,
     timeInForce : String,
-
     orderQty    : f64,
     side        : String,
     price       : f64,
@@ -61,13 +57,13 @@ pub struct ExchangeOrderBuilder {
     channel     : String,
     ordType     : String,
     timeInForce : String,
-
     orderQty    : f64,
     side        : String,
     price       : f64,
     symbol      : String,
     clOrdID     : String,
 }
+
 impl ExchangeOrderBuilder {
     pub fn new() -> ExchangeOrderBuilder {
         ExchangeOrderBuilder {
@@ -126,7 +122,6 @@ impl ExchangeOrderBuilder {
             clOrdID: self.clOrdID.to_string()}
     }
 }
-
 
 pub struct CcyPair<'a> {
     pub base: &'a str,

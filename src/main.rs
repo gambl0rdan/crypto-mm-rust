@@ -32,7 +32,6 @@ fn connect_sub() -> String {
     sub.to_string()
 }
 
-
 fn subscribe_to_channel(channel : &str, 
     subscriptions : &HashMap<&'static str, String>,
     client: &mut Client<TlsStream<TcpStream>>
@@ -86,8 +85,6 @@ fn build_subscriptions(base_ccy : String) -> HashMap<&'static str, String> {
 fn run_for_blockchain(base_ccy : String) {
     let ccy_pair = if "GBP" == base_ccy {GBP_BTC} else {USD_BTC};
     let mut engine : OrderEngine::<CcyPair> = OrderEngine::new(ccy_pair); 
-
-
     let subscriptions : HashMap<&str, String> = build_subscriptions(base_ccy);
 
     let url = "wss://ws.prod.blockchain.info/mercury-gateway/v1/ws".to_string();
@@ -96,6 +93,7 @@ fn run_for_blockchain(base_ccy : String) {
         .origin("https://exchange.blockchain.com".to_owned());
     
     println!("Try connect syncronously to {}", &url);
+    
     let mut client = builder.connect_secure(None).unwrap();
     let mut client_in_loop = Box::new(builder.connect_secure(None).unwrap());
 
@@ -108,7 +106,7 @@ fn run_for_blockchain(base_ccy : String) {
     subscribe_to_channel("prices", &subscriptions, &mut client); 
     subscribe_to_channel("ticker", &subscriptions, &mut client);
     subscribe_to_channel("balances", &subscriptions, &mut client);
-    // subscribe_to_channel("l2", &subscriptions, &mut client);
+    subscribe_to_channel("l2", &subscriptions, &mut client);
     subscribe_to_channel("trading", &subscriptions, &mut client);
 
     client_in_loop.send_message(&message).unwrap();
@@ -279,13 +277,14 @@ fn handle_l2(value : serde_json::Value) -> serde_json::Result<()>{
 
     let tick_l2 : orders::OrderL2 = serde_json::from_value(value)?;
     
-    for b in tick_l2.bids{
-        println!("{} {}", b.px, b.qty);
-    }
+    //I've commented these out as the ticks are too frequent. Can do something smarter than just iterating though.
+    // for b in tick_l2.bids{
+    //     println!("{} {}", b.px, b.qty);
+    // }
 
-    for a in tick_l2.asks{
-        println!("{} {}", a.px, a.qty);
-    }
+    // for a in tick_l2.asks{
+    //     println!("{} {}", a.px, a.qty);
+    // }
 
     Ok(())
 }
