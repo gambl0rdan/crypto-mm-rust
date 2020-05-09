@@ -14,10 +14,10 @@ use std::format;
 use std::net::TcpStream;
 
 pub mod orders;
-use orders::{ExchangeOrderBuilder, ExchangeOrder, OrderEngine, Task, TickPrice, CcyPair, USD_BTC, GBP_BTC};
+use orders::{ExchangeOrderBuilder, ExchangeOrder, OrderEngine, Task, TickPrice, CcyPair, BTC_USD, BTC_GBP};
 
 fn main(){
-        run_for_blockchain(String::from("GBP"));
+        run_for_blockchain(&BTC_GBP);
 }
 
 fn connect_sub() -> String {
@@ -42,31 +42,34 @@ fn subscribe_to_channel(channel : &str,
     client.send_message(&message).unwrap();
 }
 
-fn build_subscriptions(base_ccy : String) -> HashMap<&'static str, String> {
+fn build_subscriptions(pair : &CcyPair) -> HashMap<&'static str, String> {
     let mut scores = HashMap::new();
+    let symbol = format!("{}-{}", pair.quoted,pair.base);
+
     let sub_prices : serde_json::Value = json!({
         "action": "subscribe",
         "channel": "prices",
-        "symbol": format!("BTC-{}", base_ccy),
+        "symbol": symbol,
         "granularity":  3600 //60 //86400
     });
 
     let sub_ticker : serde_json::Value = json!({
         "action": "subscribe",
         "channel": "ticker",
-        "symbol": format!("BTC-{}", base_ccy)
+        "symbol": symbol
     });
 
+    //Assume the base currency is the local currency
     let sub_balances : serde_json::Value = json!({
         "action": "subscribe",
         "channel": "balances",
-        "local_currency": format!("{}", base_ccy)
+        "local_currency": pair.base
     });
 
     let sub_l2_order_book : serde_json::Value = json!({
         "action": "subscribe",
         "channel": "l2",
-        "symbol": format!("BTC-{}", base_ccy)
+        "symbol": symbol
     });
         
     let sub_trading : serde_json::Value = json!({
@@ -74,6 +77,7 @@ fn build_subscriptions(base_ccy : String) -> HashMap<&'static str, String> {
         "channel": "trading"
     });
 
+    scores.insert("auth", connect_sub());
     scores.insert("prices", sub_prices.to_string());
     scores.insert("ticker", sub_ticker.to_string());
     scores.insert("balances", sub_balances.to_string());
@@ -82,10 +86,9 @@ fn build_subscriptions(base_ccy : String) -> HashMap<&'static str, String> {
     scores
 }
 
-fn run_for_blockchain(base_ccy : String) {
-    let ccy_pair = if "GBP" == base_ccy {GBP_BTC} else {USD_BTC};
-    let mut engine : OrderEngine::<CcyPair> = OrderEngine::new(ccy_pair); 
-    let subscriptions : HashMap<&str, String> = build_subscriptions(base_ccy);
+fn run_for_blockchain(pair : &'static CcyPair) {
+    let mut engine : OrderEngine::<CcyPair> = OrderEngine::new(pair); 
+    let subscriptions : HashMap<&str, String> = build_subscriptions(pair);
 
     let url = "wss://ws.prod.blockchain.info/mercury-gateway/v1/ws".to_string();
     let mut builder = ClientBuilder::new(&url)
@@ -99,16 +102,14 @@ fn run_for_blockchain(base_ccy : String) {
 
     println!("{}", "Connection successful");
     
-    let message = Message::text(connect_sub());
-    client.send_message(&message).unwrap();
-    
+    subscribe_to_channel("auth", &subscriptions, &mut client); 
     subscribe_to_channel("prices", &subscriptions, &mut client); 
     subscribe_to_channel("ticker", &subscriptions, &mut client);
     subscribe_to_channel("balances", &subscriptions, &mut client);
     subscribe_to_channel("l2", &subscriptions, &mut client);
     subscribe_to_channel("trading", &subscriptions, &mut client);
 
-    client_in_loop.send_message(&message).unwrap();
+    subscribe_to_channel("auth", &subscriptions, &mut client_in_loop); 
     subscribe_to_channel("trading", &subscriptions, &mut client_in_loop);
     
     for message in client.incoming_messages() { 
@@ -126,8 +127,6 @@ fn run_for_blockchain(base_ccy : String) {
                         for input_task in tasks{
                             
                             let task = engine.decide(input_task);
-                            // println!("Task is {}", task.action);
-                            
                             if task.is_some(){
                                 let task = task.unwrap();
                                 match task.action {
@@ -137,7 +136,6 @@ fn run_for_blockchain(base_ccy : String) {
                                         }
                                     },
                                     "new_order" => {
-                                        // max_orders
                                         engine.increment_order_count();
                                         create_and_submit_order(task.tick_last_price.unwrap(), &mut client_in_loop).unwrap();
                                     },
@@ -151,13 +149,8 @@ fn run_for_blockchain(base_ccy : String) {
                     None => (),
                 }
 			}
-			OwnedMessage::Close(_) => {
-				// let _ = sender.send_message(&Message::close());
-				break;
-			}
-			OwnedMessage::Ping(data) => {
-				// sender.send_message(&OwnedMessage::Pong(data)).unwrap();
-			}
+			OwnedMessage::Close(_) => {}
+			OwnedMessage::Ping(_data) => {}
 			_ => (),
 		}
     }
@@ -179,26 +172,14 @@ fn handle_api_response(resp : &String) -> Option<Vec<Task>> {
         return None;
     } 
 
-    if "ticker" == channel {
-        return handle_ticker(parsed);
+    match channel {
+        "ticker"    => handle_ticker(parsed),
+        "prices"    => handle_prices(parsed),
+        "balances"  => {println!("Latest balances: {}", parsed); None},
+        "l2"        => {handle_l2(parsed).unwrap(); None},
+        "trading"   => handle_trading(parsed),
+        _           => {println!("Other channel: {}", parsed); None}
     }
-    else  if "prices" == channel {
-        return handle_prices(parsed);
-    }
-    else if channel == "balances"{
-        println!("Latest balances: {}", parsed);
-    }
-    else if channel == "l2"{
-        handle_l2(parsed).unwrap();
-    }
-    else if channel == "trading" {
-        return handle_trading(parsed);
-    }
-    else{
-        println!("Other channel: {}", parsed);
-    }
-
-    None
 }
 
 fn create_order(side : &str, price : f64, order_qty : f64, symbol : &str) -> ExchangeOrder { 
@@ -234,7 +215,6 @@ fn cancel_order(order_id :String, client: &mut Client<TlsStream<TcpStream>>) -> 
       });
 
       let cancel_json = serde_json::to_string(&cancel)?;
-
       println!("Cancelling order {}", cancel_json);
       
       let message = Message::text(cancel_json);
@@ -253,11 +233,9 @@ fn handle_trading(value : serde_json::Value, ) -> Option<Vec<Task>>{
         match value["orders"].as_array() {
             Some(orders) => {
                 for order in orders {
-                    // println!("Open order: {}", order);
                     let order_id : String = order["orderID"].as_str().unwrap().to_owned();
                     order_ids.push(order_id); 
                 }
-
             },
             None => println!("No active orders")
         };
@@ -303,8 +281,7 @@ fn handle_prices(value : serde_json::Value) -> Option<Vec<Task>>{
                 volume: raw_prices[5].as_f64().unwrap()
             };
             
-            println!("Price tick has following: high:{} low:{} open:{} close{}", price.high,price.low, price.open, price.close);
-            
+            println!("Price tick has following: high:{} low:{} open:{} close:{}", price.high,price.low, price.open, price.close);         
         },
         None => ()
     }

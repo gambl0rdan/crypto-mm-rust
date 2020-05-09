@@ -2,8 +2,8 @@
 use serde_json;
 use serde::{Deserialize, Serialize};
 
-pub const USD_BTC : CcyPair = CcyPair{ base: "USD", quoted: "BTC"};
-pub const GBP_BTC : CcyPair = CcyPair{ base: "GBP", quoted: "BTC"};
+pub const BTC_USD : CcyPair = CcyPair{ base: "USD", quoted: "BTC"};
+pub const BTC_GBP : CcyPair = CcyPair{ base: "GBP", quoted: "BTC"};
     
 pub struct TickPrice {
     pub timestamp : f64, 
@@ -128,18 +128,18 @@ pub struct CcyPair<'a> {
     pub quoted : &'a str,
 }
 
-pub struct OrderEngine<CcyPair> {
+pub struct OrderEngine<'a, CcyPair> {
     pub series_l2 : Vec<OrderL2>,
     pub series_prices : Vec<TickPrice>,
     pub serices_last_price : Vec<f64>,
-    pub ccy_pair : CcyPair,
+    pub ccy_pair : &'a CcyPair,
     max_orders : u32,
     submitted_orders : u32
 }
 
-impl <CcyPair> OrderEngine<CcyPair> {
+impl <'a, CcyPair> OrderEngine<'a, CcyPair> {
     
-    pub fn new(ccy_pair: CcyPair) -> OrderEngine<CcyPair> {
+    pub fn new(ccy_pair: &'static CcyPair) -> OrderEngine<CcyPair> {
         OrderEngine {series_l2 : vec![],
             series_prices : vec![],
             serices_last_price : vec![],
@@ -148,7 +148,6 @@ impl <CcyPair> OrderEngine<CcyPair> {
             submitted_orders : 0
         }
     }
-
 
     pub fn increment_order_count(&mut self){
         self.submitted_orders  = &self.submitted_orders  + 1;
@@ -182,12 +181,12 @@ mod tests {
 
     #[test]
     fn test_currencies() {
-        const USD_BTC : CcyPair = CcyPair{ base: "USD", quoted: "BTC"};
-        const GBP_BTC : CcyPair = CcyPair{ base: "GBP", quoted: "BTC"};
+        const BTC_USD : CcyPair = CcyPair{ base: "USD", quoted: "BTC"};
+        const BTC_GBP : CcyPair = CcyPair{ base: "GBP", quoted: "BTC"};
 
-        assert_eq!(USD_BTC.base, "USD");
-        assert_eq!(GBP_BTC.base, "USD");
-        assert_eq!(USD_BTC.quoted, "BTC");
-        assert_eq!(GBP_BTC.quoted, "BTC");
+        assert_eq!(BTC_USD.base, "USD");
+        assert_eq!(BTC_GBP.base, "USD");
+        assert_eq!(BTC_USD.quoted, "BTC");
+        assert_eq!(BTC_GBP.quoted, "BTC");
     }
 }
