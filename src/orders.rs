@@ -185,7 +185,7 @@ mod tests {
         const BTC_GBP : CcyPair = CcyPair{ base: "GBP", quoted: "BTC"};
 
         assert_eq!(BTC_USD.base, "USD");
-        assert_eq!(BTC_GBP.base, "USD");
+        assert_eq!(BTC_GBP.base, "GBP");
         assert_eq!(BTC_USD.quoted, "BTC");
         assert_eq!(BTC_GBP.quoted, "BTC");
     }
